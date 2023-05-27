@@ -5,11 +5,14 @@ from tokenizers import Tokenizer
 
 class ShakespeareDataset(Dataset):
     def __init__(self,
-                 filename=f"ShakespeareBooks/CompleteWorksOfShakespeare.txt"):
+                 filename=f"ShakespeareBooks/CompleteWorksOfShakespeare.txt",
+                 splitType="train"):
         super().__init__()
         self.filename = filename
         self.data = self.loadData()
         self.tokenizer = Tokenizer.from_file(path="Tokenizer/Vocab.json")
+        self.trainSplits, self.valSplits = self.generateSplits()
+        self.splitType = splitType
 
     def removeBlankLines(self, data):
         cleanedData = []
@@ -26,9 +29,26 @@ class ShakespeareDataset(Dataset):
         return data
 
     def __len__(self):
-        return len(self.data)
+        if self.splitType == "train":
+            return len(self.trainSplits)
+        else:
+            return len(self.valSplits)
+
+    def generateSplits(self):
+        torch.manual_seed(42)
+        lengthOfTheDataset = len(self.data)
+        randomIndices = torch.randint(0, lengthOfTheDataset,
+                                      (lengthOfTheDataset,))
+        splitValue = round(0.7 * lengthOfTheDataset)
+        trainIndices = randomIndices[: splitValue]
+        valIndices = randomIndices[splitValue:]
+        return trainIndices, valIndices
 
     def __getitem__(self, item):
+        if self.splitType == "train":
+            item = self.trainSplits[item]
+        else:
+            item = self.valSplits[item]
         sentence = "[CLS] " + self.data[item] + " [SEP]"
         tokenizedSentence = self.tokenizer.encode(sequence=sentence)
         maxSequenceLength = len(tokenizedSentence.ids)
@@ -49,8 +69,8 @@ class ShakespeareDataset(Dataset):
 
 
 if __name__ == "__main__":
-    text = ShakespeareDataset()
+    text = ShakespeareDataset(splitType="val")
     for i in range(1, 3):
         batch = text[i]
-        print(batch["ids"])
-        print(batch["masks"])
+        print(batch["sourceIds"])
+        print(batch["sourceMasks"])
