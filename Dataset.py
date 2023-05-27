@@ -29,9 +29,10 @@ class ShakespeareDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, item):
-        sentence = "[CLS] " + self.data[1] + " [SEP]"
+        sentence = "[CLS] " + self.data[item] + " [SEP]"
         tokenizedSentence = self.tokenizer.encode(sequence=sentence)
         maxSequenceLength = len(tokenizedSentence.ids)
+        # return maxSequenceLength # To compute maxSequenceLength of the dataset.
         inputIds = torch.tensor([tokenizedSentence.ids] * maxSequenceLength)
         inputAttentionMask = torch.tensor([tokenizedSentence.attention_mask]
                                           * maxSequenceLength)
@@ -43,7 +44,6 @@ class ShakespeareDataset(Dataset):
 if __name__ == "__main__":
     text = ShakespeareDataset()
     for i in range(1, 3):
-        print(f"Length of the sentence {i} = {len(text[i][0]['input_ids'])}")
-        print(f"Sentence {i} = {text[i][0]['input_ids']}")
-
-    print(f"Total length of the dataset = {len(text)}")
+        batch = text[i]
+        print(batch["ids"])
+        print(batch["masks"])
