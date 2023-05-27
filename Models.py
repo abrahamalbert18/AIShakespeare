@@ -12,10 +12,10 @@ class ShakespeareBrain(nn.Module):
                                                  d_model=32)
 
     def forward(self, encoderInputs, decoderInputs, sourceMask):
-        source = self.embedding(encoderInputs)
-        target = self.embedding(decoderInputs)
-        outputs = self.transformerNetwork(src=source, tgt=target,
-                                          src_mask=sourceMask)
+        source = self.embedding(encoderInputs.long())
+        target = self.embedding(decoderInputs.long())
+        outputs = self.transformerNetwork(src=source, tgt=target,)
+                                          # src_mask=sourceMask)
         return outputs
 
 if __name__=="__main__":
