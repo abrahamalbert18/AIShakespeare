@@ -1,5 +1,7 @@
+import torch
 from torch.utils.data import Dataset
 from transformers import AutoTokenizer
+from tokenizers import Tokenizer
 
 class ShakespeareDataset(Dataset):
     def __init__(self,
@@ -7,6 +9,7 @@ class ShakespeareDataset(Dataset):
         super().__init__()
         self.filename = filename
         self.data = self.loadData()
+        self.tokenizer = Tokenizer.from_file(path="Tokenizer/Vocab.json")
 
     def removeBlankLines(self, data):
         cleanedData = []
@@ -26,25 +29,21 @@ class ShakespeareDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, item):
-        sentence = self.data[item].split(" ")
-        batchInputSentence = [""]
-        inputSentence = ""
-        for word in sentence:
-            inputSentence += word + " "
-            batchInputSentence.append(inputSentence.rstrip())
-
-        # return inputSentence, outputWord
-        # Todo: Tokenize the data for training generative models
-        tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-        encodedInputs = tokenizer(batchInputSentence, padding=True,
-                                  truncation=True)
-        encodedOutputs = tokenizer(sentence)
-        return encodedInputs, encodedOutputs
+        sentence = "[CLS] " + self.data[1] + " [SEP]"
+        tokenizedSentence = self.tokenizer.encode(sequence=sentence)
+        maxSequenceLength = len(tokenizedSentence.ids)
+        inputIds = torch.tensor([tokenizedSentence.ids] * maxSequenceLength)
+        inputAttentionMask = torch.tensor([tokenizedSentence.attention_mask]
+                                          * maxSequenceLength)
+        sentenceBatch = {"ids": torch.tril(inputIds),
+                         "masks": torch.tril(inputAttentionMask)}
+        return sentenceBatch
 
 
 if __name__ == "__main__":
     text = ShakespeareDataset()
     for i in range(1, 3):
-        print(text[i])
+        print(f"Length of the sentence {i} = {len(text[i][0]['input_ids'])}")
+        print(f"Sentence {i} = {text[i][0]['input_ids']}")
 
     print(f"Total length of the dataset = {len(text)}")
