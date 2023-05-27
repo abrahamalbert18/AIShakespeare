@@ -36,8 +36,15 @@ class ShakespeareDataset(Dataset):
         inputIds = torch.tensor([tokenizedSentence.ids] * maxSequenceLength)
         inputAttentionMask = torch.tensor([tokenizedSentence.attention_mask]
                                           * maxSequenceLength)
-        sentenceBatch = {"ids": torch.tril(inputIds),
-                         "masks": torch.tril(inputAttentionMask)}
+        sourceIds = torch.tril(inputIds)
+        sourceMasks = torch.tril(inputAttentionMask)
+
+        targetIds = torch.diag(sourceIds).unsqueeze(dim=1)
+        targetMasks = torch.diag(sourceMasks).unsqueeze(dim=1)
+        sentenceBatch = {"sourceIds": sourceIds,
+                         "sourceMasks": sourceMasks,
+                         "targetIds": targetIds,
+                         "targetMasks": targetMasks}
         return sentenceBatch
 
 
