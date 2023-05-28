@@ -49,7 +49,8 @@ class ShakespeareDataset(Dataset):
             item = self.trainSplits[item]
         else:
             item = self.valSplits[item]
-        sentence = "[CLS] " + self.data[item] + " [SEP]"
+        sentence = "[CLS] " + self.data[item]
+        target = self.data[item] + " [SEP]"
         tokenizedSentence = self.tokenizer.encode(sequence=sentence)
         maxSequenceLength = len(tokenizedSentence.ids)
         # return maxSequenceLength # To compute maxSequenceLength of the dataset.
@@ -59,8 +60,15 @@ class ShakespeareDataset(Dataset):
         sourceIds = torch.tril(inputIds)
         sourceMasks = torch.tril(inputAttentionMask)
 
-        targetIds = torch.diag(sourceIds).unsqueeze(dim=1)
-        targetMasks = torch.diag(sourceMasks).unsqueeze(dim=1)
+        tokenizedTarget = self.tokenizer.encode(sequence=target)
+        maxSequenceLength = len(tokenizedTarget.ids)
+
+        targetIds = torch.tensor([tokenizedTarget.ids] * maxSequenceLength)
+        targetMasks = torch.tensor([tokenizedTarget.attention_mask]
+                                          * maxSequenceLength)
+        targetIds = torch.tril(targetIds)
+        targetMasks = torch.tril(targetMasks)
+
         sentenceBatch = {"sourceIds": sourceIds,
                          "sourceMasks": sourceMasks,
                          "targetIds": targetIds,
