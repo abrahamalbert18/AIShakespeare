@@ -3,20 +3,35 @@ from torch import nn
 from Dataset import ShakespeareDataset
 
 class ShakespeareBrain(nn.Module):
-    def __init__(self):
+    def __init__(self, contextLength=32):
         super().__init__()
         self.vocabSize = 30000
-        self.inputSequenceLength = 32
-        self.embedding = nn.Embedding(self.vocabSize, self.inputSequenceLength)
+        self.contextLength = contextLength
+        # self.oneHotEncoding = torch.zeros(self.vocabSize, self.vocabSize)
+        self.wordEmbedding = nn.Embedding(self.vocabSize, self.contextLength)
+        self.positionEmbedding = nn.Embedding(self.vocabSize,
+                                              self.contextLength)
         self.transformerNetwork = nn.Transformer(nhead=8, batch_first=True,
-                                                 d_model=32)
+                                                 d_model=self.contextLength)
+        self.criterion = nn.CrossEntropyLoss()
+        self.layerNorm = nn.LayerNorm(self.contextLength)
 
     def forward(self, encoderInputs, decoderInputs, sourceMask):
-        source = self.embedding(encoderInputs.long())
-        target = self.embedding(decoderInputs.long())
-        outputs = self.transformerNetwork(src=source, tgt=target,)
-                                          # src_mask=sourceMask)
-        return outputs
+        B, T = encoderInputs.size()
+        targetTokens = decoderInputs.diag()
+        position = torch.arange(0, T, device=encoderInputs.device,
+                                dtype=torch.long)
+        source = self.layerNorm(self.wordEmbedding(encoderInputs.long())) + \
+                 self.positionEmbedding(position)
+        target = self.layerNorm(self.wordEmbedding(decoderInputs.long())) + \
+                 self.positionEmbedding(position)
+        outputs = self.transformerNetwork(src=source, tgt=target,
+                                          src_mask=sourceMask)
+        predictionLayer = nn.Linear(T * self.contextLength,
+                            self.vocabSize).to(encoderInputs.device)
+        outputs = predictionLayer(outputs.view(B, -1))
+        loss = self.criterion(outputs, targetTokens)
+        return outputs, loss
 
 if __name__=="__main__":
     model = ShakespeareBrain()
