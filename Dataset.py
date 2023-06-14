@@ -50,29 +50,15 @@ class ShakespeareDataset(Dataset):
         else:
             item = self.valSplits[item]
         sentence = "[CLS] " + self.data[item]
-        target = self.data[item] + " [SEP]"
         tokenizedSentence = self.tokenizer.encode(sequence=sentence)
-        maxSequenceLength = len(tokenizedSentence.ids)
-        # return maxSequenceLength # To compute maxSequenceLength of the dataset.
-        inputIds = torch.tensor([tokenizedSentence.ids] * maxSequenceLength)
-        inputAttentionMask = torch.tensor([tokenizedSentence.attention_mask]
-                                          * maxSequenceLength)
-        sourceIds = torch.tril(inputIds)
-        sourceMasks = torch.tril(inputAttentionMask)
 
-        tokenizedTarget = self.tokenizer.encode(sequence=target)
-        maxSequenceLength = len(tokenizedTarget.ids)
-
-        targetIds = torch.tensor([tokenizedTarget.ids] * maxSequenceLength)
-        targetMasks = torch.tensor([tokenizedTarget.attention_mask]
-                                          * maxSequenceLength)
-        targetIds = torch.tril(targetIds)
-        targetMasks = torch.tril(targetMasks)
-
-        sentenceBatch = {"sourceIds": sourceIds,
-                         "sourceMasks": sourceMasks,
-                         "targetIds": targetIds,
-                         "targetMasks": targetMasks}
+        tokenizedTarget = tokenizedSentence.ids[1:] + [2]
+        sentenceBatch = {"sourceIds": torch.tensor(tokenizedSentence.ids),
+                         "sourceMasks": torch.tensor(
+                                 tokenizedSentence.attention_mask),
+                         "targetIds": torch.tensor(tokenizedTarget),
+                         "targetMasks": torch.tensor(
+                                 torch.ones(len(tokenizedTarget)))}
         return sentenceBatch
 
 
