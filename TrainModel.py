@@ -7,10 +7,12 @@ from Dataset import ShakespeareDataset
 from Models import ShakespeareBrain
 from tqdm import tqdm
 import argparse
+from torch.utils.tensorboard import SummaryWriter
 
 torch.manual_seed(42)
 # For generating outputs
 tokenizer = Tokenizer.from_file(path="Tokenizer/Vocab.json")
+writer = SummaryWriter()
 
 trainingDataset = ShakespeareDataset(splitType="train")
 validationDataset = ShakespeareDataset(splitType="val")
@@ -35,16 +37,23 @@ def customCollator(batchData):
     return zeroSourceIds, zeroTargetIds, zeroSourceMasks.float()
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-batchSize", "-bs", default=40, type=int)
-parser.add_argument("-learningRate", "-lr", default=1e-5, type=float)
-parser.add_argument("-contextLength", "-cl", default=32, type=int)
+parser.add_argument("-bs", "--batchSize",  default=40, type=int)
+parser.add_argument("-lr", "--learningRate", default=1e-3, type=float)
+parser.add_argument("-cl", "--contextLength", default=32, type=int)
+# parser.add_argument("-h", "--numberOfHeads", default=4, type=int)
+parser.add_argument("-e", "--epochs", default=20, type=int)
+parser.add_argument("-c", "--classification", default=False, type=bool)
 args = parser.parse_args()
 
 batchSize = args.batchSize
 learningRate = args.learningRate
 contextLength = args.contextLength
+numberOfEpochs = args.epochs
+isClassification = args.classification
+# numberOfHeads = args.numberOfHeads
+numberOfHeads = 4
 
-trainingDataloader = DataLoader(dataset=trainingDataset, shuffle=True,
+trainingDataloader = DataLoader(dataset=trainingDataset, shuffle=False,
                                 batch_size=batchSize,
                                 collate_fn=customCollator)
 
@@ -56,17 +65,19 @@ dataloaders = {"train": trainingDataloader,
                "val": validationDataloader}
 
 device = torch.device("mps")
-model = ShakespeareBrain(contextLength)
+model = ShakespeareBrain(contextLength=contextLength,
+                         classification=isClassification,
+                         numberOfHeads=numberOfHeads)
+# model.compile()
 model.to(device)
 
 # loss and optimizer
-criterion = nn.CrossEntropyLoss()
+# criterion = nn.CrossEntropyLoss()
 softmax = nn.Softmax()
 optimizer = torch.optim.AdamW(model.parameters(), lr=learningRate)
 
 # learning rate scheduler
-numberOfEpochs = 20
-
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 # best metrics and parameters
 bestEpoch = 0
 # bestModelWeights = copy.deepcopy(model.state_dict)
@@ -90,29 +101,44 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
             targetIds = targetIds.to(device)
 
             with torch.set_grad_enabled(phase == "train"):
+                optimizer.zero_grad()
                 outputs, loss = model(sourceIds, targetIds, sourceMasks)
-                predictions = outputs.softmax(dim=1).max(-1)[1].to("cpu")
+                writer.add_scalar(f"{phase.capitalize()} Loss/Epoch", loss, epoch+1)
+                if isClassification:
+                    # classificaion
+                    predictions = outputs.softmax(dim=1).max(-1)[1].to("cpu")
+                else:
+                    # regression
+                    predictions = outputs.clamp(min=0, max=1).mul(30000).to(
+                            "cpu").round(decimals=6)
                 if e % 20 == 0:
                     predictedTargets = batch[1].clone() # gets updated
                     for i in range(predictedTargets.shape[0]):
                         # print(predictedTargets[i, i])
                         predictedTargets[i, i] = predictions[i]
-                        # print(predictedTargets[i, i])
+
                     predictedText = tokenizer.decode_batch(
                                         predictedTargets.tolist())
-                    predictedText = '\n'.join(predictedText)
+
+                    print(f"Predicted :"
+                          f" {tokenizer.decode(predictions.short().tolist())}")
+                    print(f"Actual : "
+                          f"{tokenizer.decode(targetIds.diag().tolist())}\n")
+
                     originalText = tokenizer.decode_batch(
                                         batch[1].tolist())
+                    predictedText = '\n'.join(predictedText)
                     originalText = '\n'.join(originalText)
-                    print(f"Actual Targets:\n{originalText}")
-                    print(f"Predictions:\n{predictedText}")
+                    # print(f"Actual Targets:\n{originalText}")
+                    # print(f"Predictions:\n{predictedText}")
 
                 if phase == "train":
                     # backpropgate the loss
                     loss.backward()
                     # update the weights
                     optimizer.step()
-                    optimizer.zero_grad()
+                    scheduler.step()
+
             #TODO write code for generating text predictions
             epochLoss += loss
 
@@ -121,3 +147,4 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
         """
         averageEpochLoss = epochLoss / (e + 1)
         print(f"{phase} loss = {averageEpochLoss:.4f}")
+        writer.close()
