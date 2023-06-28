@@ -39,7 +39,7 @@ class ShakespeareDataset(Dataset):
         lengthOfTheDataset = len(self.data)
         randomIndices = torch.randint(0, lengthOfTheDataset,
                                       (lengthOfTheDataset,))
-        splitValue = round(0.7 * lengthOfTheDataset)
+        splitValue = round(0.85 * lengthOfTheDataset)
         trainIndices = randomIndices[: splitValue]
         valIndices = randomIndices[splitValue:]
         return trainIndices, valIndices

@@ -3,9 +3,10 @@ from torch import nn
 from Dataset import ShakespeareDataset
 
 class ShakespeareBrain(nn.Module):
-    def __init__(self, numberOfHeads=4, contextLength=32, classification=True):
+    def __init__(self, numberOfHeads=4, contextLength=32, classification=True,
+                 vocabSize=2000):
         super().__init__()
-        self.vocabSize = 30000
+        self.vocabSize = vocabSize
         self.contextLength = contextLength
         self.numberOfHeads = numberOfHeads
         self.classifcation = classification

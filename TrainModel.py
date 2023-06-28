@@ -8,11 +8,11 @@ from Models import ShakespeareBrain
 from tqdm import tqdm
 import argparse
 from torch.utils.tensorboard import SummaryWriter
+import torch.distributed as distributed
 
 torch.manual_seed(42)
 # For generating outputs
 tokenizer = Tokenizer.from_file(path="Tokenizer/Vocab.json")
-writer = SummaryWriter()
 
 trainingDataset = ShakespeareDataset(splitType="train")
 validationDataset = ShakespeareDataset(splitType="val")
@@ -43,6 +43,7 @@ parser.add_argument("-cl", "--contextLength", default=32, type=int)
 # parser.add_argument("-h", "--numberOfHeads", default=4, type=int)
 parser.add_argument("-e", "--epochs", default=20, type=int)
 parser.add_argument("-c", "--classification", default=False, type=bool)
+parser.add_argument("-nv", "--cuda", default=False, type=bool)
 args = parser.parse_args()
 
 batchSize = args.batchSize
@@ -50,10 +51,15 @@ learningRate = args.learningRate
 contextLength = args.contextLength
 numberOfEpochs = args.epochs
 isClassification = args.classification
+cuda = args.cuda
 # numberOfHeads = args.numberOfHeads
-numberOfHeads = 4
+numberOfHeads = 8
+vocabSize = 2000
 
-trainingDataloader = DataLoader(dataset=trainingDataset, shuffle=False,
+modelName = f"ShakespeareWith-->{numberOfHeads}Heads+CL-->" \
+            f"{contextLength}+VocabSize-->{vocabSize}.pth.tar"
+
+trainingDataloader = DataLoader(dataset=trainingDataset, shuffle=True,
                                 batch_size=batchSize,
                                 collate_fn=customCollator)
 
@@ -64,23 +70,35 @@ validationDataloader = DataLoader(dataset=validationDataset, shuffle=True,
 dataloaders = {"train": trainingDataloader,
                "val": validationDataloader}
 
-device = torch.device("mps")
 model = ShakespeareBrain(contextLength=contextLength,
                          classification=isClassification,
-                         numberOfHeads=numberOfHeads)
+                         numberOfHeads=numberOfHeads,
+                         vocabSize=vocabSize)
 # model.compile()
+device = torch.device("mps") # for mac
+if cuda:
+    device = torch.device("cuda") # for NVIDIA GPUs
+
 model.to(device)
+
+"""
+# Code for distributed computing
+if distributed.is_available():
+    # do something
+"""
 
 # loss and optimizer
 # criterion = nn.CrossEntropyLoss()
 softmax = nn.Softmax()
 optimizer = torch.optim.AdamW(model.parameters(), lr=learningRate)
+# optimizer = torch.optim.SGD(model.parameters(), lr=learningRate)
 
 # learning rate scheduler
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
 # best metrics and parameters
 bestEpoch = 0
-# bestModelWeights = copy.deepcopy(model.state_dict)
+bestEpochLoss = 13.0
+writer = SummaryWriter(f"runs/{modelName}")
 
 # training and evaluation loop
 for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
@@ -94,24 +112,24 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
             model.eval()
 
         epochLoss = 0
-        for e, batch in enumerate(dataloaders[phase]):
+        for e, batch in tqdm(enumerate(dataloaders[phase]),
+                             desc="Iteration progress",
+                             leave=False):
             sourceIds, targetIds, sourceMasks = batch[0], batch[1], batch[2]
             sourceIds = sourceIds.to(device)
             sourceMasks = sourceMasks.to(device)
             targetIds = targetIds.to(device)
 
             with torch.set_grad_enabled(phase == "train"):
-                optimizer.zero_grad()
                 outputs, loss = model(sourceIds, targetIds, sourceMasks)
-                writer.add_scalar(f"{phase.capitalize()} Loss/Epoch", loss, epoch+1)
                 if isClassification:
                     # classificaion
                     predictions = outputs.softmax(dim=1).max(-1)[1].to("cpu")
                 else:
                     # regression
-                    predictions = outputs.clamp(min=0, max=1).mul(30000).to(
+                    predictions = outputs.clamp(min=0, max=1).mul(vocabSize).to(
                             "cpu").round(decimals=6)
-                if e % 20 == 0:
+                if e % 200 == 0:
                     predictedTargets = batch[1].clone() # gets updated
                     for i in range(predictedTargets.shape[0]):
                         # print(predictedTargets[i, i])
@@ -138,8 +156,8 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
                     # update the weights
                     optimizer.step()
                     scheduler.step()
+                    optimizer.zero_grad()
 
-            #TODO write code for generating text predictions
             epochLoss += loss
 
         """
@@ -147,4 +165,11 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
         """
         averageEpochLoss = epochLoss / (e + 1)
         print(f"{phase} loss = {averageEpochLoss:.4f}")
+        writer.add_scalar(f"{phase.capitalize()} Loss/Epoch", averageEpochLoss,
+                          epoch + 1)
+        if (averageEpochLoss < bestEpochLoss) and averageEpochLoss <= 3.0:
+            bestEpochLoss = averageEpochLoss
+            torch.save(model.state_dict(), f"SavedModels/{modelName}")
+            torch.save(optimizer.state_dict(), f"SavedModels/OptimizerFor"
+                                               f"{modelName}")
         writer.close()
