@@ -127,8 +127,8 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
                     predictions = outputs.softmax(dim=1).max(-1)[1].to("cpu")
                 else:
                     # regression
-                    predictions = outputs.clamp(min=0, max=1).mul(vocabSize).to(
-                            "cpu").round(decimals=6)
+                    predictions = outputs.mul(vocabSize).to(
+                            "cpu").round()
                 if e % 200 == 0:
                     predictedTargets = batch[1].clone() # gets updated
                     for i in range(predictedTargets.shape[0]):
