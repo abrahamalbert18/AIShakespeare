@@ -4,12 +4,13 @@ from Dataset import ShakespeareDataset
 
 class ShakespeareBrain(nn.Module):
     def __init__(self, numberOfHeads=4, contextLength=32, classification=True,
-                 vocabSize=2000):
+                 vocabSize=2000, generate=False):
         super().__init__()
         self.vocabSize = vocabSize
         self.contextLength = contextLength
         self.numberOfHeads = numberOfHeads
         self.classifcation = classification
+        self.generate = generate
         # self.oneHotEncoding = torch.zeros(self.vocabSize, self.vocabSize)
         self.wordEmbedding = nn.Embedding(self.vocabSize, self.contextLength)
         self.positionEmbedding = nn.Embedding(self.vocabSize,
@@ -49,10 +50,11 @@ class ShakespeareBrain(nn.Module):
             predictionLayer = nn.Linear(T * self.contextLength,
                                 self.vocabSize).to(encoderInputs.device)
             outputs = predictionLayer(outputs.view(B, -1))
+        if self.generate:
+            return outputs
 
         loss = self.criterion(outputs, targetTokens)
         return outputs, loss
-
 if __name__=="__main__":
     model = ShakespeareBrain()
 
