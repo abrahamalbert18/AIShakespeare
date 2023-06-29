@@ -10,14 +10,25 @@ from tokenizers.decoders import WordPiece as WordPieceDecoder
 from tokenizers.decoders import ByteLevel as BytePieceDecoder
 from tokenizers.trainers import WordPieceTrainer
 from tokenizers.trainers import BpeTrainer
+import argparse
 
-filename=f"ShakespeareBooks/CompleteWorksOfShakespeare.txt"
-def trainAndSaveTokenizer(filename=f"ShakespeareBooks/CompleteWorksOfShakespeare.txt"):
+parser = argparse.ArgumentParser()
+parser.add_argument("-vs", "--vocabSize", default=5000, type=int)
+parser.add_argument("-f", "--filename",
+                    default=f"ShakespeareBooks/CompleteWorksOfShakespeare.txt",
+                    type=str)
+args = parser.parse_args()
+vocabSize = args.vocabSize
+filename= args.filename
+
+def trainAndSaveTokenizer(
+        filename=f"ShakespeareBooks/CompleteWorksOfShakespeare.txt",
+        vocabSize=vocabSize):
     tokenizer = Tokenizer(WordPiece(unk_token="[UNK]"))
     tokenizer.pre_tokenizer = Whitespace()
     tokenizer.normalizer = Sequence([NFD(), Lowercase(), StripAccents()])
     tokenizer.decoder = WordPieceDecoder()
-    trainer = WordPieceTrainer(vocab_size=2000,
+    trainer = WordPieceTrainer(vocab_size=vocabSize,
                                special_tokens=["[UNK]","[CLS]",
                                                "[SEP]", "[PAD]", "[MASK]"])
 
@@ -25,7 +36,7 @@ def trainAndSaveTokenizer(filename=f"ShakespeareBooks/CompleteWorksOfShakespeare
     tokenizer.save("Tokenizer/Vocab.json")
     pass
 
-trainAndSaveTokenizer() # Run it only once.
+trainAndSaveTokenizer(filename, vocabSize) # Run it only once.
 
 def loadTokenizer(file="Tokenizer/Vocab.json"):
     return Tokenizer.from_file(path=file)
