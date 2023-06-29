@@ -30,7 +30,7 @@ if cuda:
 
 model = ShakespeareBrain(contextLength=768,
                          classification=False,
-                         numberOfHeads=768,
+                         numberOfHeads=8,
                          vocabSize=5000,
                          generate=True)
 model.load_state_dict(modelWeights)
