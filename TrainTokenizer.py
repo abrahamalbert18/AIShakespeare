@@ -15,15 +15,18 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-vs", "--vocabSize", default=5000, type=int)
 parser.add_argument("-f", "--filename",
-                    default=f"ShakespeareBooks/CompleteWorksOfShakespeare.txt",
-                    type=str)
+                    default = f"ShakespeareBooks/CompleteWorksOfShakespeare.txt",
+                    type = str)
 args = parser.parse_args()
 vocabSize = args.vocabSize
-filename= args.filename
+filename = args.filename
+
+
+
 
 def trainAndSaveTokenizer(
-        filename=f"ShakespeareBooks/CompleteWorksOfShakespeare.txt",
-        vocabSize=vocabSize):
+                    filename=f"ShakespeareBooks/CompleteWorksOfShakespeare.txt",
+                    vocabSize=vocabSize):
     tokenizer = Tokenizer(WordPiece(unk_token="[UNK]"))
     tokenizer.pre_tokenizer = Whitespace()
     tokenizer.normalizer = Sequence([NFD(), Lowercase(), StripAccents()])

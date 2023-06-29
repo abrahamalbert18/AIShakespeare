@@ -54,12 +54,12 @@ isClassification = args.classification
 cuda = args.cuda
 # numberOfHeads = args.numberOfHeads
 numberOfHeads = 8
-vocabSize = 2000
+vocabSize = 5000
 
 modelName = f"ShakespeareWith-->{numberOfHeads}Heads+CL-->" \
             f"{contextLength}+VocabSize-->{vocabSize}.pth.tar"
 
-trainingDataloader = DataLoader(dataset=trainingDataset, shuffle=True,
+trainingDataloader = DataLoader(dataset=trainingDataset, shuffle=False,
                                 batch_size=batchSize,
                                 collate_fn=customCollator)
 
@@ -90,8 +90,8 @@ if distributed.is_available():
 # loss and optimizer
 # criterion = nn.CrossEntropyLoss()
 softmax = nn.Softmax()
-optimizer = torch.optim.AdamW(model.parameters(), lr=learningRate)
-# optimizer = torch.optim.SGD(model.parameters(), lr=learningRate)
+#optimizer = torch.optim.AdamW(model.parameters(), lr=learningRate)
+optimizer = torch.optim.SGD(model.parameters(), lr=learningRate)
 
 # learning rate scheduler
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
@@ -167,7 +167,7 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
         print(f"{phase} loss = {averageEpochLoss:.4f}")
         writer.add_scalar(f"{phase.capitalize()} Loss/Epoch", averageEpochLoss,
                           epoch + 1)
-        if (averageEpochLoss < bestEpochLoss) and averageEpochLoss <= 3.0:
+        if (averageEpochLoss < bestEpochLoss) and averageEpochLoss <= 0.10:
             bestEpochLoss = averageEpochLoss
             torch.save(model.state_dict(), f"SavedModels/{modelName}")
             torch.save(optimizer.state_dict(), f"SavedModels/OptimizerFor"
