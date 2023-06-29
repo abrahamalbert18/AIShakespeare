@@ -25,7 +25,7 @@ class ShakespeareBrain(nn.Module):
         self.sigmoid = nn.Sigmoid()
         self.layerNorm = nn.LayerNorm(self.contextLength)
 
-    def forward(self, encoderInputs, decoderInputs, sourceMask):
+    def forward(self, encoderInputs, decoderInputs, sourceMask=None):
         B, T = encoderInputs.size()
         targetTokens = decoderInputs.diag()
         position = torch.arange(0, T, device=encoderInputs.device,
@@ -34,8 +34,8 @@ class ShakespeareBrain(nn.Module):
                  self.positionEmbedding(position)
         target = self.layerNorm(self.wordEmbedding(decoderInputs.long())) + \
                  self.positionEmbedding(position)
-        outputs = self.transformerNetwork(src=source, tgt=target,
-                                          src_mask=sourceMask)
+        outputs = self.transformerNetwork(src=source, tgt=target)
+
         if not self.classifcation:
             # Regression
             predictionLayer = nn.Linear(T * self.contextLength, 1).to(
