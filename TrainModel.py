@@ -30,12 +30,13 @@ def customCollator(batchData):
     zeroSourceIds = torch.zeros((batchSize, maxSize), dtype=torch.int16)
     zeroSourceMasks = torch.zeros((batchSize, maxSize), dtype=torch.int16)
     zeroTargetIds = torch.zeros((batchSize, maxSize), dtype=torch.int16)
+    zeroTokensToPredict = torch.zeros((batchSize, 1), dtype=torch.int16)
     for i, item in enumerate(batchData):
         zeroSourceIds[i,:item["sourceIds"].size(-1)] = item["sourceIds"]
         zeroSourceMasks[i, :item["sourceMasks"].size(-1)] = item["sourceMasks"]
         zeroTargetIds[i, :item["targetIds"].size(-1)] = item["targetIds"]
-
-    return zeroSourceIds, zeroTargetIds, zeroSourceMasks.float(), batchData["tokensToPredict"]
+        zeroTokensToPredict[i, 0] = item["tokensToPredict"]
+    return zeroSourceIds, zeroTargetIds, zeroSourceMasks.float(), zeroTokensToPredict
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-bs", "--batchSize",  default=40, type=int)
