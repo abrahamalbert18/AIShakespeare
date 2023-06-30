@@ -51,9 +51,12 @@ class ShakespeareDataset(Dataset):
             item = self.valSplits[item]
         sentence = self.data[item]
         tokenizedSentence = self.tokenizer.encode(sequence=sentence)
-
-        decoderInputIds = tokenizedSentence.ids[1:]
-        tokensToPredict = decoderInputIds[-1]
+        if len(tokenizedSentence.ids) != 1:
+            decoderInputIds = tokenizedSentence.ids[1:]
+            tokensToPredict = decoderInputIds[-1]
+        else:
+            decoderInputIds = [2]
+            tokensToPredict = [2]
         sentenceBatch = {"sourceIds": torch.tensor(tokenizedSentence.ids[:-1]),
                          "sourceMasks": torch.tensor(
                                  tokenizedSentence.attention_mask[:-1]),
@@ -65,8 +68,8 @@ class ShakespeareDataset(Dataset):
 
 if __name__ == "__main__":
     text = ShakespeareDataset(splitType="val")
-    for i in range(1, 3):
+    for i in range(3):
         batch = text[i]
         print(batch["sourceIds"])
         print(batch["targetIds"])
-        print(batch["tokensToPredict"])
+        print(i, batch["tokensToPredict"])
