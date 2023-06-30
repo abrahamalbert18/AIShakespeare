@@ -52,10 +52,10 @@ class ShakespeareDataset(Dataset):
         sentence = self.data[item]
         tokenizedSentence = self.tokenizer.encode(sequence=sentence)
 
-        tokenizedTarget = tokenizedSentence.ids[1:] + [2]
-        sentenceBatch = {"sourceIds": torch.tensor(tokenizedSentence.ids),
+        tokenizedTarget = tokenizedSentence.ids[1:]
+        sentenceBatch = {"sourceIds": torch.tensor(tokenizedSentence.ids[:-1]),
                          "sourceMasks": torch.tensor(
-                                 tokenizedSentence.attention_mask),
+                                 tokenizedSentence.attention_mask[:-1]),
                          "targetIds": torch.tensor(tokenizedTarget),
                          "targetMasks": torch.tensor(
                                  torch.ones(len(tokenizedTarget)))}

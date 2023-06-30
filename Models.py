@@ -28,7 +28,7 @@ class ShakespeareBrain(nn.Module):
 
     def forward(self, encoderInputs, decoderInputs, sourceMask=None):
         B, T = encoderInputs.size()
-        targetTokens = decoderInputs.diag()
+        targetTokens = decoderInputs[:,-1]
         position = torch.arange(0, T, device=encoderInputs.device,
                                 dtype=torch.long)
         source = self.layerNorm(self.wordEmbedding(encoderInputs.long())) + \
