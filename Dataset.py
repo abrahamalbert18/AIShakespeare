@@ -58,7 +58,8 @@ class ShakespeareDataset(Dataset):
                          "sourceMasks": torch.tensor(
                                  tokenizedSentence.attention_mask[:-1]),
                          "targetIds": torch.tensor(decoderInputIds),
-                         "tokensToPredict": torch.tensor(tokensToPredict)}
+                         "tokensToPredict": torch.tensor(
+                                 tokensToPredict).unsqueeze(0)}
         return sentenceBatch
 
 
