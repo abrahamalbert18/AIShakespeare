@@ -49,7 +49,7 @@ class ShakespeareDataset(Dataset):
             item = self.trainSplits[item]
         else:
             item = self.valSplits[item]
-        sentence = "[CLS] " + self.data[item]
+        sentence = self.data[item]
         tokenizedSentence = self.tokenizer.encode(sequence=sentence)
 
         tokenizedTarget = tokenizedSentence.ids[1:] + [2]
@@ -67,4 +67,4 @@ if __name__ == "__main__":
     for i in range(1, 3):
         batch = text[i]
         print(batch["sourceIds"])
-        print(batch["sourceMasks"])
+        print(batch["targetIds"])

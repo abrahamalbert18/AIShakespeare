@@ -55,6 +55,7 @@ class ShakespeareBrain(nn.Module):
 
         loss = self.criterion(outputs, targetTokens)
         return outputs, loss
+
 if __name__=="__main__":
     model = ShakespeareBrain()
 
