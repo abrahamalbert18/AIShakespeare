@@ -27,7 +27,7 @@ class ShakespeareBrain(nn.Module):
         self.layerNorm = nn.LayerNorm(self.contextLength)
 
     def forward(self, encoderInputs, decoderInputs, sourceMask=None,
-                tokensToPredict):
+                tokensToPredict=None):
         B, T = encoderInputs.size()
         targetTokens = tokensToPredict
         position = torch.arange(0, T, device=encoderInputs.device,

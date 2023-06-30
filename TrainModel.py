@@ -35,7 +35,7 @@ def customCollator(batchData):
         zeroSourceMasks[i, :item["sourceMasks"].size(-1)] = item["sourceMasks"]
         zeroTargetIds[i, :item["targetIds"].size(-1)] = item["targetIds"]
 
-    return zeroSourceIds, zeroTargetIds, zeroSourceMasks.float()
+    return zeroSourceIds, zeroTargetIds, zeroSourceMasks.float(), batchData["tokensToPredict"]
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-bs", "--batchSize",  default=40, type=int)
