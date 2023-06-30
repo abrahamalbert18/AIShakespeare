@@ -148,7 +148,7 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
                     #print(f"Source :"
                      #     f"{tokenizer.decode(sourceIds.tolist())}")
                     print(f"Predicted : {predictions.tolist()}\n")
-                    print(f"Actual : {tokensToPredict.tolist()}\n")
+                    print(f"Actual : {tokensToPredict.squeeze(0).tolist()}\n")
 
 
                    # originalText = tokenizer.decode_batch(
