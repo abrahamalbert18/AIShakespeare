@@ -119,12 +119,15 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
                              desc="Iteration progress",
                              leave=False):
             sourceIds, targetIds, sourceMasks = batch[0], batch[1], batch[2]
+            tokensToPredict = batch[-1]
             sourceIds = sourceIds.to(device)
             sourceMasks = sourceMasks.to(device)
             targetIds = targetIds.to(device)
+            tokensToPredict = tokensToPredict.to(device)
 
             with torch.set_grad_enabled(phase == "train"):
-                outputs, loss = model(sourceIds, targetIds, sourceMasks)
+                outputs, loss = model(sourceIds, targetIds, sourceMasks,
+                                      tokensToPredict)
                 if isClassification:
                     # classificaion
                     predictions = outputs.softmax(dim=1).max(-1)[1].to("cpu")
@@ -132,7 +135,7 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
                     # regression
                     predictions = outputs.mul(vocabSize).to(
                             "cpu").round()
-                #if e % 200 == 0:
+                if e % 500 == 0:
                     #predictedTargets = batch[1].clone() # gets updated
                     #for i in range(predictedTargets.shape[0]):
                         # print(predictedTargets[i, i])
@@ -143,8 +146,9 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
 
                     #print(f"Source :"
                      #     f"{tokenizer.decode(sourceIds.tolist())}")
-                    #print(f"Predicted : "
-                      #    f"{tokenizer.decode(predicted.tolist())}\n")
+                    print(f"Predicted : {predictions.tolist()}\n")
+                    print(f"Actual : {tokensToPredict.tolist()}\n")
+
 
                    # originalText = tokenizer.decode_batch(
                     #                    batch[1].tolist())
