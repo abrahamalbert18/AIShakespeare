@@ -136,7 +136,7 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
                     # regression
                     predictions = outputs.mul(vocabSize).to(
                             "cpu").round()
-                if e % 500 == 0:
+                #if e % 100 == 0:
                     #predictedTargets = batch[1].clone() # gets updated
                     #for i in range(predictedTargets.shape[0]):
                         # print(predictedTargets[i, i])
@@ -147,8 +147,8 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
 
                     #print(f"Source :"
                      #     f"{tokenizer.decode(sourceIds.tolist())}")
-                    print(f"Predicted : {predictions.tolist()}\n")
-                    print(f"Actual : {tokensToPredict.squeeze(0).tolist()}\n")
+                    #print(f"Predicted : {predictions.tolist()}\n")
+                    #print(f"Actual : {tokensToPredict.view(-1).tolist()}\n")
 
 
                    # originalText = tokenizer.decode_batch(
@@ -175,7 +175,7 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
         print(f"{phase} loss = {averageEpochLoss:.4f}")
         writer.add_scalar(f"{phase.capitalize()} Loss/Epoch", averageEpochLoss,
                           epoch + 1)
-        if (averageEpochLoss < bestEpochLoss) and averageEpochLoss <= 0.30 and phase == "val":
+        if (averageEpochLoss < bestEpochLoss) and averageEpochLoss <= 3.0 and phase == "val":
             bestEpochLoss = averageEpochLoss
             torch.save(model.state_dict(), f"SavedModels/{modelName}")
             torch.save(optimizer.state_dict(), f"SavedModels/OptimizerFor"

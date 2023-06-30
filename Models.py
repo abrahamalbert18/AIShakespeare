@@ -54,7 +54,7 @@ class ShakespeareBrain(nn.Module):
         if self.generate:
             return outputs
 
-        loss = self.criterion(outputs, targetTokens.squeeze(0))
+        loss = self.criterion(outputs, targetTokens.view(-1))
         return outputs, loss
 
 if __name__=="__main__":
