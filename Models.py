@@ -21,7 +21,7 @@ class ShakespeareBrain(nn.Module):
         if self.classifcation:
             self.criterion = nn.CrossEntropyLoss() #classification
         else:
-            self.criterion = nn.MSELoss(reduction="sum")
+            self.criterion = nn.MSELoss()
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
         self.layerNorm = nn.LayerNorm(self.contextLength)

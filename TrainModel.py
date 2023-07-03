@@ -94,8 +94,8 @@ if distributed.is_available():
 # loss and optimizer
 # criterion = nn.CrossEntropyLoss()
 softmax = nn.Softmax()
-#optimizer = torch.optim.AdamW(model.parameters(), lr=learningRate)
-optimizer = torch.optim.SGD(model.parameters(), lr=learningRate)
+optimizer = torch.optim.AdamW(model.parameters(), lr=learningRate)
+#optimizer = torch.optim.SGD(model.parameters(), lr=learningRate)
 
 # learning rate scheduler
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.1)
