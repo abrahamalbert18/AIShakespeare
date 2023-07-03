@@ -45,7 +45,8 @@ class ShakespeareBrain(nn.Module):
 
             outputs = predictionLayer(outputs.view(B, -1)).squeeze()
             outputs = outputs.abs().clamp(max=1)
-            targetTokens = torch.div(targetTokens, self.vocabSize)
+            if not self.generate:
+                targetTokens = torch.div(targetTokens, self.vocabSize)
         else:
         # Classification
             predictionLayer = nn.Linear(T * self.contextLength,

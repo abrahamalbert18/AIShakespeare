@@ -5,7 +5,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-n", "--modelName",
-                    default=f"ShakespeareWith-->8Heads+CL-->768+VocabSize-->5000.pth.tar")
+                    default=f"ShakespeareWith-->8Heads+CL-->512+VocabSize-->10000.pth.tar")
 parser.add_argument("-nv", "--cuda", default=False, type=bool)
 parser.add_argument("-t", "--tokens", default=500, type=int)
 parser.add_argument("-w", "--word", default="love", type=str)
@@ -21,6 +21,8 @@ tokenizer = Tokenizer.from_file(path="Tokenizer/Vocab.json")
 sentence = f"{firstWord} "
 tokenizedSentence = tokenizer.encode(sequence=sentence)
 tokenizedTarget = tokenizedSentence.ids[1:] + [2]
+if len(tokenizedSentence.ids) > 1:
+    tokenizedTarget = tokenizedSentence.ids[1:]
 source = torch.tensor(tokenizedSentence.ids)
 target = torch.tensor(tokenizedTarget)
 
@@ -28,10 +30,11 @@ modelWeights = torch.load(f"SavedModels/{modelName}", map_location="mps")
 if cuda:
     model = torch.load(f"SavedModels/{modelName}", map_location="cuda")
 
-model = ShakespeareBrain(contextLength=768,
+vocabSize = 10000
+model = ShakespeareBrain(contextLength=512,
                          classification=False,
                          numberOfHeads=8,
-                         vocabSize=5000,
+                         vocabSize=vocabSize,
                          generate=True)
 model.load_state_dict(modelWeights)
 model.eval()
@@ -42,10 +45,10 @@ print(f"{'-'*40}\n\n")
 for _ in range(numberOfTokens//25):
     for i in range(25):
         outputs = model(source.unsqueeze(0), target.unsqueeze(0))
-        predictions = outputs.mul(5000).to("cpu").round()
-        if predictions.data == 5000:
-           continue
-        predictedTokens[i] = predictions.data
+        predictions = outputs.mul(vocabSize).to("cpu").round()
+        # if predictions.data == vocabSize:
+        #    continue
+        predictedTokens[i], predictedTokens[i+1] = predictions.data, 2
         source = predictedTokens[:i+1]
         target = predictedTokens[1:i+2]
         # print(predictions)
