@@ -46,8 +46,8 @@ for _ in range(numberOfTokens//25):
     for i in range(25):
         outputs = model(source.unsqueeze(0), target.unsqueeze(0))
         predictions = outputs.mul(vocabSize).to("cpu").round()
-        # if predictions.data == vocabSize:
-        #    continue
+        if predictions.data == vocabSize:
+           continue
         predictedTokens[i], predictedTokens[i+1] = predictions.data, 2
         source = predictedTokens[:i+1]
         target = predictedTokens[1:i+2]
