@@ -44,7 +44,7 @@ class ShakespeareBrain(nn.Module):
                                         encoderInputs.device)
 
             outputs = predictionLayer(outputs.view(B, -1)).squeeze()
-            outputs = outputs.abs().clamp(max=1)
+            outputs = self.sigmoid(outputs)
             if not self.generate:
                 targetTokens = torch.div(targetTokens, self.vocabSize)
         else:

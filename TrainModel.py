@@ -81,7 +81,7 @@ model = ShakespeareBrain(contextLength=contextLength,
 # model.compile()
 device = torch.device("mps") # for mac
 if cuda:
-    device = torch.device("cuda") # for NVIDIA GPUs
+    device = torch.device("cuda:1") # for NVIDIA GPUs
 
 model.to(device)
 
