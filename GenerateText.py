@@ -40,21 +40,25 @@ model.load_state_dict(modelWeights)
 model.eval()
 
 predictedTokens = torch.zeros(numberOfTokens)
-
+predictedTokensPerLine = torch.zeros(25)
 print(f"{'-'*40}\n\n")
-for _ in range(numberOfTokens//25):
+for l in range(numberOfTokens//25):
     for i in range(25):
         outputs = model(source.unsqueeze(0), target.unsqueeze(0))
         predictions = outputs.mul(vocabSize).to("cpu").round()
         if predictions.data == vocabSize:
            continue
-        predictedTokens[i], predictedTokens[i+1] = predictions.data, 2
-        source = predictedTokens[:i+1]
-        target = predictedTokens[1:i+2]
+        predictedTokensPerLine[i] = predictions.data
+        source = predictedTokensPerLine[:i + 1]
+        target = predictedTokensPerLine[1:i + 2]
+        target[-1] = 2
         # print(predictions)
-        # print(source, target)
-
-    predictedWords = tokenizer.decode(source.short().tolist())
+        # print(source, target
+    predictedTokens[l * 25: (l + 1) * 25] = predictedTokensPerLine
+    predictedWords = tokenizer.decode(predictedTokensPerLine.short().tolist())
     print(predictedWords)
-    source, target = source[i-5:], target[i-5:]
+    t = torch.zeros(predictedTokensPerLine.shape)
+    t[:target.size(-1)] = target
+    t[-1] = 2
+    source, target = source[-5:-1], t[-5:-1]
 print(f"{'-'*40}")
