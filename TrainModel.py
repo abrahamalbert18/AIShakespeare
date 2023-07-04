@@ -14,8 +14,8 @@ torch.manual_seed(42)
 # For generating outputs
 tokenizer = Tokenizer.from_file(path="Tokenizer/Vocab.json")
 
-trainingDataset = ShakespeareDataset(splitType="train")
-validationDataset = ShakespeareDataset(splitType="val")
+trainingDataset = ShakespeareDataset(splitType="train", filename=f"ShakespeareBooks/ShakespeareTexts.txt")
+validationDataset = ShakespeareDataset(splitType="val", filename=f"ShakespeareBooks/ShakespeareTexts.txt")
 
 lengthOfDatasets = {"train": len(trainingDataset),
                     "val": len(validationDataset)}

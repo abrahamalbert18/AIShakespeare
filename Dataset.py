@@ -67,8 +67,8 @@ class ShakespeareDataset(Dataset):
 
 
 if __name__ == "__main__":
-    text = ShakespeareDataset(splitType="val")
-    for i in range(3):
+    text = ShakespeareDataset(splitType="val", filename=f"ShakespeareBooks/ShakespeareTexts.txt")
+    for i in range(30):
         batch = text[i]
         print(batch["sourceIds"])
         print(batch["targetIds"])
