@@ -26,16 +26,18 @@ if len(tokenizedSentence.ids) > 1:
 source = torch.tensor(tokenizedSentence.ids)
 target = torch.tensor(tokenizedTarget)
 
-modelWeights = torch.load(f"SavedModels/{modelName}", map_location="mps")
-if cuda:
-    model = torch.load(f"SavedModels/{modelName}", map_location="cuda")
+if not cuda:
+   modelWeights = torch.load(f"SavedModels/{modelName}", map_location="mps")
+else:
+    modelWeights = torch.load(f"SavedModels/{modelName}", map_location="cuda")
 
 vocabSize = 10000
 model = ShakespeareBrain(contextLength=512,
                          classification=False,
                          numberOfHeads=8,
                          vocabSize=vocabSize,
-                         generate=True)
+                         generate=True,
+                         depth=3)
 model.load_state_dict(modelWeights)
 model.eval()
 

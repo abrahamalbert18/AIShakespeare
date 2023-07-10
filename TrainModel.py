@@ -47,6 +47,7 @@ parser.add_argument("-e", "--epochs", default=20, type=int)
 parser.add_argument("-c", "--classification", default=False, type=bool)
 parser.add_argument("-nv", "--cuda", default=False, type=bool)
 parser.add_argument("-v", "--vocabSize", default=5000, type=int)
+parser.add_argument("-d", "--depth", default=6, type=int)
 args = parser.parse_args()
 
 batchSize = args.batchSize
@@ -57,6 +58,7 @@ isClassification = args.classification
 cuda = args.cuda
 # numberOfHeads = args.numberOfHeads
 numberOfHeads = 8
+depth = args.depth
 vocabSize = args.vocabSize
 
 modelName = f"ShakespeareWith-->{numberOfHeads}Heads+CL-->" \
@@ -77,7 +79,8 @@ model = ShakespeareBrain(contextLength=contextLength,
                          classification=isClassification,
                          numberOfHeads=numberOfHeads,
                          vocabSize=vocabSize,
-                         generate=False)
+                         generate=False,
+                         depth=depth)
 # model.compile()
 device = torch.device("mps") # for mac
 if cuda:
