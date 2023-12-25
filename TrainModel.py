@@ -39,15 +39,15 @@ def customCollator(batchData):
     return zeroSourceIds, zeroTargetIds, zeroSourceMasks.float(), zeroTokensToPredict
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-bs", "--batchSize",  default=40, type=int)
+parser.add_argument("-bs", "--batchSize",  default=200, type=int)
 parser.add_argument("-lr", "--learningRate", default=1e-3, type=float)
-parser.add_argument("-cl", "--contextLength", default=32, type=int)
+parser.add_argument("-cl", "--contextLength", default=512, type=int)
 # parser.add_argument("-h", "--numberOfHeads", default=4, type=int)
 parser.add_argument("-e", "--epochs", default=20, type=int)
-parser.add_argument("-c", "--classification", default=False, type=bool)
+parser.add_argument("-c", "--classification", default=True, type=bool)
 parser.add_argument("-nv", "--cuda", default=False, type=bool)
-parser.add_argument("-v", "--vocabSize", default=5000, type=int)
-parser.add_argument("-d", "--depth", default=6, type=int)
+parser.add_argument("-v", "--vocabSize", default=2000, type=int)
+parser.add_argument("-d", "--depth", default=4, type=int)
 args = parser.parse_args()
 
 batchSize = args.batchSize
@@ -101,7 +101,7 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=learningRate)
 #optimizer = torch.optim.SGD(model.parameters(), lr=learningRate)
 
 # learning rate scheduler
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.1)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
 # best metrics and parameters
 bestEpoch = 0
 bestEpochLoss = 13.0
@@ -139,27 +139,6 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
                     # regression
                     predictions = outputs.mul(vocabSize).to(
                             "cpu").round()
-                #if e % 100 == 0:
-                    #predictedTargets = batch[1].clone() # gets updated
-                    #for i in range(predictedTargets.shape[0]):
-                        # print(predictedTargets[i, i])
-                       # predictedTargets[i, i] = predictions[i]
-
-                    #predictedText = tokenizer.decode_batch(
-                     #                   predictedTargets.tolist())
-
-                    #print(f"Source :"
-                     #     f"{tokenizer.decode(sourceIds.tolist())}")
-                    #print(f"Predicted : {predictions.tolist()}\n")
-                    #print(f"Actual : {tokensToPredict.view(-1).tolist()}\n")
-
-
-                   # originalText = tokenizer.decode_batch(
-                    #                    batch[1].tolist())
-                    #predictedText = '\n'.join(predictedText)
-                    #originalText = '\n'.join(originalText)
-                    # print(f"Actual Targets:\n{originalText}")
-                    # print(f"Predictions:\n{predictedText}")
 
                 if phase == "train":
                     # backpropgate the loss
@@ -178,7 +157,7 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
         print(f"{phase} loss = {averageEpochLoss:.4f}")
         writer.add_scalar(f"{phase.capitalize()} Loss/Epoch", averageEpochLoss,
                           epoch + 1)
-        if (averageEpochLoss < bestEpochLoss) and averageEpochLoss <= 3.0 and phase == "val":
+        if (averageEpochLoss < bestEpochLoss) and phase == "val":
             bestEpochLoss = averageEpochLoss
             torch.save(model.state_dict(), f"SavedModels/{modelName}")
             torch.save(optimizer.state_dict(), f"SavedModels/OptimizerFor"
