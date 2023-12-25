@@ -10,10 +10,11 @@ from tokenizers.decoders import WordPiece as WordPieceDecoder
 from tokenizers.decoders import ByteLevel as BytePieceDecoder
 from tokenizers.trainers import WordPieceTrainer
 from tokenizers.trainers import BpeTrainer
+from tokenizers import processors
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-vs", "--vocabSize", default=5000, type=int)
+parser.add_argument("-vs", "--vocabSize", default=2000, type=int)
 parser.add_argument("-f", "--filename",
                     default = f"ShakespeareBooks/CompleteWorksOfShakespeare.txt",
                     type = str)
@@ -28,14 +29,20 @@ def trainAndSaveTokenizer(
                     filename=f"ShakespeareBooks/CompleteWorksOfShakespeare.txt",
                     vocabSize=vocabSize):
     tokenizer = Tokenizer(WordPiece(unk_token="[UNK]"))
-    tokenizer.pre_tokenizer = Whitespace()
     tokenizer.normalizer = Sequence([NFD(), Lowercase(), StripAccents()])
+    tokenizer.pre_tokenizer = Whitespace()
     tokenizer.decoder = WordPieceDecoder()
     trainer = WordPieceTrainer(vocab_size=vocabSize,
                                special_tokens=["[UNK]","[CLS]",
                                                "[SEP]", "[PAD]", "[MASK]"])
-
     tokenizer.train(files=[filename], trainer=trainer)
+    clsTokenId = tokenizer.token_to_id("[CLS]")
+    sepTokenId = tokenizer.token_to_id("[SEP]")
+    tokenizer.post_processor = processors.TemplateProcessing(
+            single=f"[CLS]:0 $A:0 [SEP]:0",
+            pair=f"[CLS]:0 $A:0 [SEP]:0 $B:1 [SEP]:1",
+            special_tokens=[("[CLS]", clsTokenId), ("[SEP]", sepTokenId)],
+    )
     tokenizer.save("Tokenizer/Vocab.json")
     pass
 
