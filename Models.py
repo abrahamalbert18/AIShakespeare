@@ -22,12 +22,14 @@ class ShakespeareBrain(nn.Module):
                                                  num_encoder_layers=self.depth,
                                                  num_decoder_layers=self.depth)
         if self.classifcation:
-            self.criterion = nn.CrossEntropyLoss() #classification
+            self.criterion = nn.CrossEntropyLoss(ignore_index=1) #classification
         else:
             self.criterion = nn.MSELoss()
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
         self.layerNorm = nn.LayerNorm(self.contextLength)
+        self.predictionLayer = nn.Linear(self.contextLength,
+                                self.vocabSize)
 
     def forward(self, encoderInputs, decoderInputs, sourceMask=None,
                 tokensToPredict=None):
@@ -40,39 +42,22 @@ class ShakespeareBrain(nn.Module):
         target = self.layerNorm(self.wordEmbedding(decoderInputs.long())) + \
                  self.positionEmbedding(position)
         outputs = self.transformerNetwork(src=source, tgt=target)
-
-        if not self.classifcation:
-            # Regression
-            predictionLayer = nn.Linear(T * self.contextLength, 1).to(
-                                        encoderInputs.device)
-
-            outputs = predictionLayer(outputs.view(B, -1)).squeeze()
-            outputs = self.sigmoid(outputs)
-            if not self.generate:
-                targetTokens = torch.div(targetTokens, self.vocabSize)
-        else:
-        # Classification
-            predictionLayer = nn.Linear(T * self.contextLength,
-                                self.vocabSize).to(encoderInputs.device)
-            outputs = predictionLayer(outputs.view(B, -1))
+        outputs = self.predictionLayer(outputs) # B, T, VocabSize
+        outputs = outputs.view(-1, outputs.size(-1)) # B * T, VocabSize
         if self.generate:
             return outputs
 
-        loss = self.criterion(outputs, targetTokens.view(-1))
+        # loss = self.criterion(outputs, targetTokens.long().view(-1))
+        loss = self.criterion(outputs, decoderInputs.long().view(-1))
         return outputs, loss
 
 if __name__=="__main__":
     model = ShakespeareBrain()
 
     def simpleTest(index=1):
-        text = ShakespeareDataset()
-        inputs = text[index]
-        source = inputs["sourceIds"]
-        target = inputs["targetIds"]
-        sourceMasks = inputs["sourceMasks"].bool()
-        outputs = model(source, target, sourceMasks)
-        print(outputs.shape)
-        return outputs
-    # outputs = simpleTest()
+        text = ShakespeareDataset(splitType="val",
+                                  filename=f"ShakespeareBooks/ShakespeareTexts.txt")
+        pass
+    outputs = simpleTest()
     # for i in range(800,1800):
     #     simpleTest(i)
