@@ -25,7 +25,7 @@ class ShakespeareDataset(Dataset):
     def loadData(self):
         with open(self.filename, "r") as file:
             data = file.readlines()
-            data = self.removeBlankLines(data)
+            # data = self.removeBlankLines(data)
         return data
 
     def __len__(self):
@@ -50,25 +50,28 @@ class ShakespeareDataset(Dataset):
         else:
             item = self.valSplits[item]
         sentence = self.data[item]
-        tokenizedSentence = self.tokenizer.encode(sequence=sentence)
-        if len(tokenizedSentence.ids) != 1:
-            decoderInputIds = tokenizedSentence.ids[1:]
-            tokensToPredict = decoderInputIds[-1]
+        if (item + 1) >= len(self.data):
+            nextSentence = "\n"
         else:
-            decoderInputIds = [2]
-            tokensToPredict = [2]
-        sentenceBatch = {"sourceIds": torch.tensor(tokenizedSentence.ids[:-1]),
+            nextSentence = self.data[item + 1]
+        tokenizedSentence = self.tokenizer.encode(sequence=sentence)
+        tokenizedNextSentence = self.tokenizer.encode(nextSentence)
+        tokenToPredict = tokenizedNextSentence.ids[1]
+        decoderInputIds = tokenizedSentence.ids[1:]
+        decoderInputIds.append(tokenToPredict)
+        sentenceBatch = {"sourceIds": torch.tensor(tokenizedSentence.ids),
                          "sourceMasks": torch.tensor(
-                                 tokenizedSentence.attention_mask[:-1]),
+                                 tokenizedSentence.attention_mask),
                          "targetIds": torch.tensor(decoderInputIds),
-                         "tokensToPredict": torch.tensor(
-                                 tokensToPredict).unsqueeze(0)}
+                         "tokensToPredict":
+                             torch.tensor(tokenToPredict).unsqueeze(0)}
         return sentenceBatch
 
 
 if __name__ == "__main__":
     text = ShakespeareDataset(splitType="val", filename=f"ShakespeareBooks/ShakespeareTexts.txt")
-    for i in range(30):
+    for i in range(len(text)-2, len(text)):
+        print(f"Number: {i+1}")
         batch = text[i]
         print(batch["sourceIds"])
         print(batch["targetIds"])
