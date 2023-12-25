@@ -5,7 +5,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-n", "--modelName",
-                    default=f"ShakespeareWith-->8Heads+CL-->512+VocabSize-->10000.pth.tar")
+                    default=f"ShakespeareWith-->8Heads+CL-->512+VocabSize-->2000.pth.tar")
 parser.add_argument("-nv", "--cuda", default=False, type=bool)
 parser.add_argument("-t", "--tokens", default=500, type=int)
 parser.add_argument("-w", "--word", default="love", type=str)
@@ -21,8 +21,6 @@ tokenizer = Tokenizer.from_file(path="Tokenizer/Vocab.json")
 sentence = f"{firstWord} "
 tokenizedSentence = tokenizer.encode(sequence=sentence)
 tokenizedTarget = tokenizedSentence.ids[1:] + [2]
-if len(tokenizedSentence.ids) > 1:
-    tokenizedTarget = tokenizedSentence.ids[1:]
 source = torch.tensor(tokenizedSentence.ids)
 target = torch.tensor(tokenizedTarget)
 
@@ -31,13 +29,13 @@ if not cuda:
 else:
     modelWeights = torch.load(f"SavedModels/{modelName}", map_location="cuda")
 
-vocabSize = 10000
+vocabSize = 2000
 model = ShakespeareBrain(contextLength=512,
-                         classification=False,
+                         classification=True,
                          numberOfHeads=8,
                          vocabSize=vocabSize,
                          generate=True,
-                         depth=3)
+                         depth=4)
 model.load_state_dict(modelWeights)
 model.eval()
 
@@ -45,22 +43,22 @@ predictedTokens = torch.zeros(numberOfTokens)
 predictedTokensPerLine = torch.zeros(25)
 print(f"{'-'*40}\n\n")
 for l in range(numberOfTokens//25):
-    for i in range(25):
+    for i in range((25 - source.size(-1))//2):
         outputs = model(source.unsqueeze(0), target.unsqueeze(0))
-        predictions = outputs.mul(vocabSize).to("cpu").round()
-        if predictions.data == vocabSize:
-           continue
-        predictedTokensPerLine[i] = predictions.data
-        source = predictedTokensPerLine[:i + 1]
-        target = predictedTokensPerLine[1:i + 2]
+        nextTokenProbs = outputs[-1].softmax(dim=-1)
+        predictions = torch.multinomial(nextTokenProbs,
+                                        num_samples=1).to("cpu")
+
+        predictedTokensPerLine[:source.size(-1)] = source.clone()
+        predictedTokensPerLine[source.size(-1) + i] = predictions.item()
+        source = predictedTokensPerLine[:source.size(-1) + 1].clone()
+        target = predictedTokensPerLine[1:source.size(-1) + 1].clone()
         target[-1] = 2
-        # print(predictions)
-        # print(source, target
+
+        # print(f"Prediction = {predictions}")
+        # print(f"Source, Target: {source}, {target}")
     predictedTokens[l * 25: (l + 1) * 25] = predictedTokensPerLine
     predictedWords = tokenizer.decode(predictedTokensPerLine.short().tolist())
     print(predictedWords)
-    t = torch.zeros(predictedTokensPerLine.shape)
-    t[:target.size(-1)] = target
-    t[-1] = 2
-    source, target = source[-5:-1], t[-5:-1]
+    source, target = source[-5:], target[-5:]
 print(f"{'-'*40}")
