@@ -70,9 +70,11 @@ class ShakespeareDataset(Dataset):
 
 if __name__ == "__main__":
     text = ShakespeareDataset(splitType="val", filename=f"ShakespeareBooks/ShakespeareTexts.txt")
-    for i in range(len(text)-2, len(text)):
+    for i in range(len(text)-5, len(text)):
         print(f"Number: {i+1}")
         batch = text[i]
         print(batch["sourceIds"])
         print(batch["targetIds"])
+        print(batch["sourceMasks"])
         print(i, batch["tokensToPredict"])
+        print(text.tokenizer.decode(batch["sourceIds"].tolist()))

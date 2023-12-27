@@ -9,6 +9,8 @@ parser.add_argument("-n", "--modelName",
 parser.add_argument("-nv", "--cuda", default=False, type=bool)
 parser.add_argument("-t", "--tokens", default=500, type=int)
 parser.add_argument("-w", "--word", default="love", type=str)
+parser.add_argument("-v", "--vocabSize", default=2000, type=int)
+parser.add_argument("-cl", "--contextLength", default=256, type=int)
 
 args = parser.parse_args()
 
@@ -16,6 +18,8 @@ modelName = args.modelName
 cuda = args.cuda
 numberOfTokens = args.tokens
 firstWord = args.word
+vocabSize = args.vocabSize
+contextLength = args.contextLength
 
 tokenizer = Tokenizer.from_file(path="Tokenizer/Vocab.json")
 sentence = f"{firstWord} "
@@ -29,8 +33,7 @@ if not cuda:
 else:
     modelWeights = torch.load(f"SavedModels/{modelName}", map_location="cuda")
 
-vocabSize = 2000
-model = ShakespeareBrain(contextLength=512,
+model = ShakespeareBrain(contextLength=contextLength,
                          classification=True,
                          numberOfHeads=8,
                          vocabSize=vocabSize,
@@ -44,7 +47,7 @@ predictedTokensPerLine = torch.zeros(25)
 print(f"{'-'*40}\n\n")
 for l in range(numberOfTokens//25):
     for i in range((25 - source.size(-1))//2):
-        outputs = model(source.unsqueeze(0), target.unsqueeze(0))
+        outputs = model(source.unsqueeze(0), target.unsqueeze(0)) # Encoder-Decoder
         nextTokenProbs = outputs[-1].softmax(dim=-1)
         predictions = torch.multinomial(nextTokenProbs,
                                         num_samples=1).to("cpu")
@@ -60,5 +63,6 @@ for l in range(numberOfTokens//25):
     predictedTokens[l * 25: (l + 1) * 25] = predictedTokensPerLine
     predictedWords = tokenizer.decode(predictedTokensPerLine.short().tolist())
     print(predictedWords)
-    source, target = source[-5:], target[-5:]
+    source, target = source[-2:-1], target[-1:]
+
 print(f"{'-'*40}")

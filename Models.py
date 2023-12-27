@@ -21,8 +21,16 @@ class ShakespeareBrain(nn.Module):
                                                  d_model=self.contextLength,
                                                  num_encoder_layers=self.depth,
                                                  num_decoder_layers=self.depth)
+        self.decoderLayer = nn.TransformerDecoderLayer(d_model=self.contextLength,
+                                                        nhead=self.numberOfHeads,
+                                                       batch_first=True,
+                                                       dropout=0.2)
+        self.decoderNetwork = nn.TransformerDecoder(decoder_layer=self.decoderLayer,
+                                                    num_layers=self.depth)
         if self.classifcation:
-            self.criterion = nn.CrossEntropyLoss(ignore_index=1) #classification
+            self.criterion = nn.CrossEntropyLoss(ignore_index=0,
+                                                 reduction="mean")
+            #classification
         else:
             self.criterion = nn.MSELoss()
         self.relu = nn.ReLU()
@@ -41,7 +49,9 @@ class ShakespeareBrain(nn.Module):
                  self.positionEmbedding(position)
         target = self.layerNorm(self.wordEmbedding(decoderInputs.long())) + \
                  self.positionEmbedding(position)
-        outputs = self.transformerNetwork(src=source, tgt=target)
+        # outputs = self.transformerNetwork(src=source, tgt=target)
+        outputs = self.decoderNetwork(tgt=target, memory=source)
+        # outputs = self.layerNorm(outputs)
         outputs = self.predictionLayer(outputs) # B, T, VocabSize
         outputs = outputs.view(-1, outputs.size(-1)) # B * T, VocabSize
         if self.generate:

@@ -41,13 +41,13 @@ def customCollator(batchData):
 parser = argparse.ArgumentParser()
 parser.add_argument("-bs", "--batchSize",  default=200, type=int)
 parser.add_argument("-lr", "--learningRate", default=1e-3, type=float)
-parser.add_argument("-cl", "--contextLength", default=512, type=int)
+parser.add_argument("-cl", "--contextLength", default=256, type=int)
 # parser.add_argument("-h", "--numberOfHeads", default=4, type=int)
 parser.add_argument("-e", "--epochs", default=20, type=int)
 parser.add_argument("-c", "--classification", default=True, type=bool)
 parser.add_argument("-nv", "--cuda", default=False, type=bool)
 parser.add_argument("-v", "--vocabSize", default=2000, type=int)
-parser.add_argument("-d", "--depth", default=4, type=int)
+parser.add_argument("-d", "--depth", default=8, type=int)
 args = parser.parse_args()
 
 batchSize = args.batchSize
@@ -98,10 +98,10 @@ if distributed.is_available():
 # criterion = nn.CrossEntropyLoss()
 softmax = nn.Softmax()
 optimizer = torch.optim.AdamW(model.parameters(), lr=learningRate)
-#optimizer = torch.optim.SGD(model.parameters(), lr=learningRate)
+# optimizer = torch.optim.SGD(model.parameters(), lr=learningRate)
 
 # learning rate scheduler
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
+# scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 # best metrics and parameters
 bestEpoch = 0
 bestEpochLoss = 13.0
@@ -132,20 +132,13 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
             with torch.set_grad_enabled(phase == "train"):
                 outputs, loss = model(sourceIds, targetIds, sourceMasks,
                                       tokensToPredict)
-                if isClassification:
-                    # classificaion
-                    predictions = outputs.softmax(dim=1).max(-1)[1].to("cpu")
-                else:
-                    # regression
-                    predictions = outputs.mul(vocabSize).to(
-                            "cpu").round()
 
                 if phase == "train":
                     # backpropgate the loss
                     loss.backward()
                     # update the weights
                     optimizer.step()
-                    scheduler.step()
+                    # scheduler.step()
                     optimizer.zero_grad()
 
             epochLoss += loss
@@ -154,12 +147,16 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
         Epoch metrics
         """
         averageEpochLoss = epochLoss / (e + 1)
-        print(f"{phase} loss = {averageEpochLoss:.4f}")
+        if epoch % 20 == 0:
+            print(f"{phase} loss = {averageEpochLoss:.4f}")
         writer.add_scalar(f"{phase.capitalize()} Loss/Epoch", averageEpochLoss,
                           epoch + 1)
         if (averageEpochLoss < bestEpochLoss) and phase == "val":
             bestEpochLoss = averageEpochLoss
+            bestEpoch = epoch
             torch.save(model.state_dict(), f"SavedModels/{modelName}")
             torch.save(optimizer.state_dict(), f"SavedModels/OptimizerFor"
                                                f"{modelName}")
         writer.close()
+print(f"Best loss: {torch.round(bestEpochLoss, 4)} @ epoch #{bestEpoch + 1}")
+print(f"Best model saved.")
