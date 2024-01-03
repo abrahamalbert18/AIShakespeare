@@ -21,14 +21,20 @@ class ShakespeareBrain(nn.Module):
                                                  d_model=self.contextLength,
                                                  num_encoder_layers=self.depth,
                                                  num_decoder_layers=self.depth)
+        self.encoderLayer = nn.TransformerEncoderLayer(d_model=self.contextLength,
+                                                        nhead=self.numberOfHeads,
+                                                       batch_first=True,
+                                                       dropout=0.2)
         self.decoderLayer = nn.TransformerDecoderLayer(d_model=self.contextLength,
                                                         nhead=self.numberOfHeads,
                                                        batch_first=True,
                                                        dropout=0.2)
+        self.encoderNetwork = nn.TransformerEncoder(encoder_layer=self.encoderLayer,
+                                                    num_layers=self.depth)
         self.decoderNetwork = nn.TransformerDecoder(decoder_layer=self.decoderLayer,
                                                     num_layers=self.depth)
         if self.classifcation:
-            self.criterion = nn.CrossEntropyLoss(ignore_index=0,
+            self.criterion = nn.CrossEntropyLoss(ignore_index=3,
                                                  reduction="mean")
             #classification
         else:
@@ -50,7 +56,8 @@ class ShakespeareBrain(nn.Module):
         target = self.layerNorm(self.wordEmbedding(decoderInputs.long())) + \
                  self.positionEmbedding(position)
         # outputs = self.transformerNetwork(src=source, tgt=target)
-        outputs = self.decoderNetwork(tgt=target, memory=source)
+        outputs = self.encoderNetwork(src=source)
+        # outputs = self.decoderNetwork(tgt=source, memory=target)
         # outputs = self.layerNorm(outputs)
         outputs = self.predictionLayer(outputs) # B, T, VocabSize
         outputs = outputs.view(-1, outputs.size(-1)) # B * T, VocabSize
