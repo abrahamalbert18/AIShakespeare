@@ -9,6 +9,7 @@ from tqdm import tqdm
 import argparse
 from torch.utils.tensorboard import SummaryWriter
 import torch.distributed as distributed
+import os
 
 torch.manual_seed(42)
 # For generating outputs
@@ -25,12 +26,12 @@ def customCollator(batchData):
     maxSize = max([batchData[i]["sourceIds"].shape[0]
                    for i in range(len(batchData))])
 
-    # Padding the data
+    # Padding the data with 3's
     batchSize = len(batchData)
-    zeroSourceIds = torch.zeros((batchSize, maxSize), dtype=torch.int16)
-    zeroSourceMasks = torch.zeros((batchSize, maxSize), dtype=torch.int16)
-    zeroTargetIds = torch.zeros((batchSize, maxSize), dtype=torch.int16)
-    zeroTokensToPredict = torch.zeros((batchSize, 1), dtype=torch.int16)
+    zeroSourceIds = 3 * torch.ones((batchSize, maxSize), dtype=torch.int16)
+    zeroSourceMasks = 3 * torch.ones((batchSize, maxSize), dtype=torch.int16)
+    zeroTargetIds = 3 * torch.ones((batchSize, maxSize), dtype=torch.int16)
+    zeroTokensToPredict = 3 * torch.ones((batchSize, 1), dtype=torch.int16)
     for i, item in enumerate(batchData):
         zeroSourceIds[i,:item["sourceIds"].size(-1)] = item["sourceIds"]
         zeroSourceMasks[i, :item["sourceMasks"].size(-1)] = item["sourceMasks"]
@@ -64,7 +65,7 @@ vocabSize = args.vocabSize
 modelName = f"ShakespeareWith-->{numberOfHeads}Heads+CL-->" \
             f"{contextLength}+VocabSize-->{vocabSize}.pth.tar"
 
-trainingDataloader = DataLoader(dataset=trainingDataset, shuffle=False,
+trainingDataloader = DataLoader(dataset=trainingDataset, shuffle=True,
                                 batch_size=batchSize,
                                 collate_fn=customCollator)
 
@@ -86,6 +87,10 @@ device = torch.device("mps") # for mac
 if cuda:
     device = torch.device("cuda:1") # for NVIDIA GPUs
 
+# Load from checkpoint
+if os.path.exists(f"SavedModels/{modelName}"):
+    modelWeights = torch.load(f"SavedModels/{modelName}", map_location=device)
+    model.load_state_dict(modelWeights)
 model.to(device)
 
 """
@@ -147,7 +152,7 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
         Epoch metrics
         """
         averageEpochLoss = epochLoss / (e + 1)
-        if epoch % 20 == 0:
+        if epoch % 1 == 0:
             print(f"{phase} loss = {averageEpochLoss:.4f}")
         writer.add_scalar(f"{phase.capitalize()} Loss/Epoch", averageEpochLoss,
                           epoch + 1)
@@ -158,5 +163,5 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
             torch.save(optimizer.state_dict(), f"SavedModels/OptimizerFor"
                                                f"{modelName}")
         writer.close()
-print(f"Best loss: {torch.round(bestEpochLoss, 4)} @ epoch #{bestEpoch + 1}")
+print(f"Best loss: {round(bestEpochLoss.item(), 4)} @ epoch #{bestEpoch + 1}")
 print(f"Best model saved.")
