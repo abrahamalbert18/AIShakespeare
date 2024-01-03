@@ -62,7 +62,7 @@ numberOfHeads = 8
 depth = args.depth
 vocabSize = args.vocabSize
 
-modelName = f"ShakespeareWith-->{numberOfHeads}Heads+CL-->" \
+modelName = f"ShakespeareWith-->{numberOfHeads}Heads-->DepthOf{depth}+CL-->" \
             f"{contextLength}+VocabSize-->{vocabSize}.pth.tar"
 
 trainingDataloader = DataLoader(dataset=trainingDataset, shuffle=True,
@@ -82,34 +82,42 @@ model = ShakespeareBrain(contextLength=contextLength,
                          vocabSize=vocabSize,
                          generate=False,
                          depth=depth)
+
+# optimizer
+softmax = nn.Softmax()
+optimizer = torch.optim.AdamW(model.parameters(), lr=learningRate)
+
 # model.compile()
 device = torch.device("mps") # for mac
 if cuda:
     device = torch.device("cuda:1") # for NVIDIA GPUs
 
+# best metrics and parameters
+bestEpoch = 0
+bestEpochLoss = 10
+
 # Load from checkpoint
 if os.path.exists(f"SavedModels/{modelName}"):
-    modelWeights = torch.load(f"SavedModels/{modelName}", map_location=device)
-    model.load_state_dict(modelWeights)
-model.to(device)
+    checkpoint = torch.load(f"SavedModels/{modelName}",
+                            map_location=device)
+    model.load_state_dict(checkpoint["modelStateDict"])
+    bestEpochLoss = checkpoint["bestEpochLoss"]
+    learningRate = checkpoint["learningRate"]
+    # optimizer.load_state_dict(checkpoint["optimizerStateDict"])
+    del checkpoint
 
+model.to(device)
 """
 # Code for distributed computing
 if distributed.is_available():
     # do something
 """
 
-# loss and optimizer
-# criterion = nn.CrossEntropyLoss()
-softmax = nn.Softmax()
-optimizer = torch.optim.AdamW(model.parameters(), lr=learningRate)
+
 # optimizer = torch.optim.SGD(model.parameters(), lr=learningRate)
 
 # learning rate scheduler
-# scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-# best metrics and parameters
-bestEpoch = 0
-bestEpochLoss = 13.0
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.1)
 writer = SummaryWriter(f"runs/{modelName}")
 
 # training and evaluation loop
@@ -143,11 +151,10 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
                     loss.backward()
                     # update the weights
                     optimizer.step()
-                    # scheduler.step()
                     optimizer.zero_grad()
 
-            epochLoss += loss
-
+            epochLoss += loss.item()
+        # scheduler.step()
         """
         Epoch metrics
         """
@@ -159,9 +166,12 @@ for epoch in tqdm(range(numberOfEpochs), desc="Epoch progress:", leave=False):
         if (averageEpochLoss < bestEpochLoss) and phase == "val":
             bestEpochLoss = averageEpochLoss
             bestEpoch = epoch
-            torch.save(model.state_dict(), f"SavedModels/{modelName}")
-            torch.save(optimizer.state_dict(), f"SavedModels/OptimizerFor"
-                                               f"{modelName}")
+            torch.save({"epoch": epoch+1,
+                        "modelStateDict": model.state_dict(),
+                        # "optimizerStateDict":optimizer.state_dict(),
+                        "bestEpochLoss":round(bestEpochLoss, 4),
+                        "learningRate":learningRate},
+                       f"SavedModels/{modelName}")
         writer.close()
-print(f"Best loss: {round(bestEpochLoss.item(), 4)} @ epoch #{bestEpoch + 1}")
+print(f"Best loss: {round(bestEpochLoss, 4)} @ epoch #{bestEpoch + 1}")
 print(f"Best model saved.")

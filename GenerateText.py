@@ -29,9 +29,9 @@ source = torch.tensor(tokenizedSentence.ids[:-1])
 target = torch.tensor(tokenizedTarget)
 
 if not cuda:
-   modelWeights = torch.load(f"SavedModels/{modelName}", map_location="mps")
+   checkpoint = torch.load(f"SavedModels/{modelName}", map_location="mps")
 else:
-    modelWeights = torch.load(f"SavedModels/{modelName}", map_location="cuda")
+    checkpoint = torch.load(f"SavedModels/{modelName}", map_location="cuda")
 
 model = ShakespeareBrain(contextLength=contextLength,
                          classification=True,
@@ -39,7 +39,7 @@ model = ShakespeareBrain(contextLength=contextLength,
                          vocabSize=vocabSize,
                          generate=True,
                          depth=4)
-model.load_state_dict(modelWeights)
+model.load_state_dict(checkpoint["modelStateDict"])
 model.eval()
 
 predictedTokens = torch.zeros(numberOfTokens)
