@@ -22,9 +22,6 @@ args = parser.parse_args()
 vocabSize = args.vocabSize
 filename = args.filename
 
-
-
-
 def trainAndSaveTokenizer(
                     filename=f"ShakespeareBooks/ShakespeareTexts.txt",
                     vocabSize=vocabSize):

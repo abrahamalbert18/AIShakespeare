@@ -15,8 +15,9 @@ class ShakespeareBrain(nn.Module):
         self.depth = depth
         # self.oneHotEncoding = torch.zeros(self.vocabSize, self.vocabSize)
         self.wordEmbedding = nn.Embedding(self.vocabSize, self.contextLength)
-        self.positionEmbedding = nn.Embedding(self.vocabSize,
-                                              self.contextLength)
+        # self.positionEmbedding = nn.Embedding(self.vocabSize,
+        #                                       self.contextLength)
+        self.positionEmbedding = PositionalEncoding(self.contextLength)
         self.transformerNetwork = nn.Transformer(nhead=self.numberOfHeads,
                                                  batch_first=True,
                                                  d_model=self.contextLength,
@@ -50,12 +51,12 @@ class ShakespeareBrain(nn.Module):
                 tokensToPredict=None):
         B, T = encoderInputs.size()
         targetTokens = tokensToPredict
-        position = torch.arange(0, T, device=encoderInputs.device,
-                                dtype=torch.long)
-        source = self.layerNorm(self.wordEmbedding(encoderInputs.long())) + \
-                 self.positionEmbedding(position)
-        target = self.layerNorm(self.wordEmbedding(decoderInputs.long())) + \
-                 self.positionEmbedding(position)
+        # position = torch.arange(0, T, device=encoderInputs.device,
+        #                         dtype=torch.long)
+        source = self.layerNorm(self.wordEmbedding(encoderInputs.long()))
+        source = self.positionEmbedding(source)
+        target = self.layerNorm(self.wordEmbedding(decoderInputs.long()))
+        target = self.positionEmbedding(target)
         # outputs = self.transformerNetwork(src=source, tgt=target)
         outputs = self.encoderNetwork(src=source)
         # outputs = self.decoderNetwork(tgt=source, memory=target)
@@ -96,12 +97,10 @@ class PositionalEncoding(nn.Module):
 
 if __name__=="__main__":
 
-    p = PositionalEncoding(contextLength=10,maxSequenceLength=5)
-    inputs = torch.rand((2, 4, 10))
-    pEmbedded = p(inputs)
-    print(pEmbedded)
-
-
+    # p = PositionalEncoding(contextLength=10,maxSequenceLength=5)
+    # inputs = torch.rand((2, 4, 10))
+    # pEmbedded = p(inputs)
+    # print(pEmbedded)
     model = ShakespeareBrain()
 
     def simpleTest(index=1):

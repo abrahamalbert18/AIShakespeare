@@ -11,7 +11,7 @@ parser.add_argument("-t", "--tokens", default=500, type=int)
 parser.add_argument("-w", "--word", default="she", type=str)
 parser.add_argument("-v", "--vocabSize", default=2000, type=int)
 parser.add_argument("-cl", "--contextLength", default=256, type=int)
-
+parser.add_argument("-d", "--depth", default=8, type=int)
 args = parser.parse_args()
 
 modelName = args.modelName
@@ -20,6 +20,7 @@ numberOfTokens = args.tokens
 firstWord = args.word
 vocabSize = args.vocabSize
 contextLength = args.contextLength
+depth = args.depth
 
 tokenizer = Tokenizer.from_file(path="Tokenizer/Vocab.json")
 sentence = f"{firstWord} "
@@ -38,7 +39,7 @@ model = ShakespeareBrain(contextLength=contextLength,
                          numberOfHeads=8,
                          vocabSize=vocabSize,
                          generate=True,
-                         depth=4)
+                         depth=depth)
 model.load_state_dict(checkpoint["modelStateDict"])
 model.eval()
 
